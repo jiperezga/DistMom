@@ -7,11 +7,11 @@
 #' @rdname moment
 #' @export
 
-cumulant <- function(k, dist, param, lowerDomain = -Inf, upperDomain = Inf, rel.tol = 1e-6){
+cumulants <- function(k, dist, param, domain = "realline", rel.tol = 1e-6){
   if(k < 1) stop("the value k must be greater than or equal to 1")
   if(k != as.integer(k)) stop("k must be an integer")
   
-  mom <- moment(k = 1:k, dist = dist, param = param, lowerDomain = lowerDomain, upperDomain = upperDomain, rel.tol = rel.tol)
+  mom <- moments(k = 1:k, dist = dist, param = param, domain = domain, rel.tol = rel.tol)
   cum <- mom[1]
   names(cum) <- paste0("cum_", 1)
   if(k == 1) return(cum)
@@ -32,4 +32,4 @@ cumulant <- function(k, dist, param, lowerDomain = -Inf, upperDomain = Inf, rel.
   
   return(cum[k])
 }
-cumulant <- Vectorize(cumulant, vectorize.args = "k")
+cumulants <- Vectorize(cumulants, vectorize.args = "k")
