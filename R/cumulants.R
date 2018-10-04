@@ -3,8 +3,8 @@
 #' @description Calcule theoretical raw moments, central moments, absolute moments or absolute central moments of any continuous distribution.
 #' @seealso \code{\link{Distributions}} for other standard distributions.
 #' @examples
-#' Enter example D: D: D:
-#' @rdname moment
+#' # Enter example D: D: D:
+#' @rdname cumulants
 #' @export
 
 cumulants <- function(k, dist, param, domain = "realline", rel.tol = 1e-6){
