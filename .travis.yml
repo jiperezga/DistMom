@@ -5,5 +5,5 @@ sudo: false
 cache: packages
 
 after_failure:
-  - cat $TRAVIS_BUILD_DIR/mccullagh.Rcheck/00install.out
-  - cat $TRAVIS_BUILD_DIR/mccullagh.Rcheck/00check.log
+  - cat $TRAVIS_BUILD_DIR/DistMom.Rcheck/00install.out
+  - cat $TRAVIS_BUILD_DIR/DistMom.Rcheck/00check.log
