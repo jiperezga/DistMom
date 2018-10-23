@@ -1,9 +1,10 @@
 Package: DistMom
 Type: Package
 Title: Distribution moments or distribution cumulants.
-Version: 0.1.1
+Version: 0.2.1
 Authors@R: person("Perez,", "Jorge",, "jivan.perez@udea.edu.co", c("aut", "cre"))
-Maintainer: orge Ivan Perez Garcia <jivan.perez@udea.edu.co>
+Maintainer: Jorge Ivan Perez Garcia <jivan.perez@udea.edu.co>
+Date: 2018-10-23
 Description: Functions to calculate: moments, central moments and cumulants of "any" distribution.
 License: GPL-3
 Encoding: UTF-8
