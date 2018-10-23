@@ -11,12 +11,13 @@
 #' @details In the \code{dist} argument, you must enter the name of the distribution of interest, for example, you can enter \code{"gamma"} or \code{"dgamma"}, both will produce the same result.
 #' @details If \eqn{f(x)} has no parameters, then do \code{param = NULL}.
 #' @details The following are the different \code{domain} argument: \itemize{
-#' \item \code{discrete}: the function is defined for the natural numbers.
-#' \item \code{realline}: the function is defined between -\eqn{\infty} and \eqn{\infty}. 
-#' \item \code{realplus}: the function is defined between 0 and \eqn{\infty}.
-#' \item \code{real0to1}: the function is defined between 0 and 1.
-#' \item \code{real-1to1}: the function is defined between -1 and 1.
-#' \item \code{c(lower = a, upper = b)}: the function is defined between \code{a} and \code{b}.
+#' \item \code{binom}: for discrete distributions of binomial type.
+#' \item \code{counts}: for discrete distributions of counting type.
+#' \item \code{realline}: for continuous distributions defined between -\eqn{\infty} and \eqn{\infty}. 
+#' \item \code{realplus}: for continuous distributions defined between 0 and \eqn{\infty}.
+#' \item \code{real0to1}: for continuous distributions defined between 0 and 1.
+#' \item \code{real-1to1}: for continuous distributions defined between -1 and 1.
+#' \item \code{c(lower = a, upper = b)}: for continuous distributions defined between \code{a} and \code{b}.
 #' }
 #' @details If \code{central = TRUE} and \code{absolute = TRUE} are selected, the k-th central absolute moments is calculated and given as \eqn{E|(X-\mu)^k|}.
 #' @return \code{moments} gives the theorical k-th raw, central, absolute or absolute central moments of any continuous probability distribution function.
@@ -69,22 +70,37 @@
 #' 
 #' #---------------------------------------------------------------------------------------
 #' 
-#' # Let's try with a discrete distributions to calculated raw and
-#' # central moments
+#' # Let's try with a discrete counting distribution to calculated
+#' # raw and central moments
 #' if(!require("gamlss.dist")) install.packages("gamlss.dist") # to install the package
-#' moments(k = 1:4, dist = "DEL", param = c(mu = 2, sigma = 3, nu = 0.5))
 #' moments(k = 1:4, dist = "DEL", param = c(mu = 2, sigma = 3, nu = 0.5),
-#'         central = TRUE)
+#'         domain = "counts")
+#' moments(k = 1:4, dist = "DEL", param = c(mu = 2, sigma = 3, nu = 0.5),
+#'         domain = "counts", central = TRUE)
+#'         
+#' #---------------------------------------------------------------------------------------
+#' 
+#' # Let's try with a discrete binomial type distribution to calculated
+#' # raw and central moments
+#' moments(k = 1:4, dist = "binom", param = c(size = 15, prob = 0.3),
+#'         domain = "binom")
+#' moments(k = 1:4, dist = "binom", param = c(size = 15, prob = 0.3),
+#'         domain = "binom", central = TRUE)
 #' @export
-moments <- function(k, dist, param, domain = "realline", central = FALSE, absolute = FALSE){
+moments <- function(k, dist, param, domain, central = FALSE, absolute = FALSE){
   rel.tol <- 1e-15
   if(k < 1) stop("the value k must be greater than or equal to 1")
   if(k != as.integer(k)) stop("k must be an integer")
   dist <- ifelse(exists(paste0("d", dist)), paste0("d", dist),
                  ifelse(exists(dist), dist, stop("The probability distribution entered does not exist or the library to which it belongs is not loaded")))
   
+  if(domain != "binom" & domain != "counts" & domain != "real0to1" & domain != "real-1to1" &
+     domain != "realline" & domain != "realplus" & !is.null(domain)) {
+    stop('The parameter entered for "domain" is not valid. Select between "binom", "counts", "real0to1", "real-1to1", "realline", "realplus" or NULL. See help for more information.')
+  }
+  
   ############################ Discrete ################################
-  if(domain == "discrete"){
+  if(domain == "binom" | domain == "counts"){
     qdist <- paste0("q", substring(dist, 2))
     if(!central & !absolute){
       mom <- if(!is.null(names(param))){
@@ -94,9 +110,13 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             rel.tol = rel.tol * 10
             q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
           }
-          if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+          if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
           mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i])), collapse = ', '),")", " x^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
-          sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+          if(domain == "counts"){
+            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+          } else {
+            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+          }
         }  else {
           dif1 <- setdiff(names(param), names(formals(dist)))
           dif2 <- setdiff(names(formals(dist)), names(param))
@@ -110,9 +130,13 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             rel.tol = rel.tol * 10
             q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ")")))
           }
-          if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+          if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
           mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ")", " x^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))))
-          sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
+          if(domain == "counts"){
+            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
+          } else {
+            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ")"))))
+          }
         } else {
           dif3 <- setdiff(names(formals(dist)), names(param))
           dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
@@ -132,9 +156,14 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
               rel.tol = rel.tol * 10
               q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
             }
-            if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+            if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
             mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i])), collapse = ', '),")", " x^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
-            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            if(domain == "counts"){
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            } else {
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            }
+            
           }  else {
             dif1 <- setdiff(names(param), names(formals(dist)))
             dif2 <- setdiff(names(formals(dist)), names(param))
@@ -148,9 +177,13 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
               rel.tol = rel.tol * 10
               q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ")")))
             }
-            if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+            if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
             mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ")", " x^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))))
-            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
+            if(domain == "counts"){
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
+            } else {
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ")"))))
+            }
           } else {
             dif3 <- setdiff(names(formals(dist)), names(param))
             dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
@@ -165,11 +198,16 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
               rel.tol = rel.tol * 10
               q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
             }
-            if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+            if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
             med <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i])), collapse = ', '),")", " x * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
-            med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
             mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i])), collapse = ', '),")", " (x - med)^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
-            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            if(domain == "counts"){
+              med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            } else {
+              med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            }
           }  else {
             dif1 <- setdiff(names(param), names(formals(dist)))
             dif2 <- setdiff(names(formals(dist)), names(param))
@@ -183,7 +221,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
               rel.tol = rel.tol * 10
               q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ")")))
             }
-            if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+            if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
             med <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ")", " x * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))))
             med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
             mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ")", " (x - med)^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))))
@@ -207,10 +245,14 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             rel.tol = rel.tol * 10
             q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
           }
-          if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+          if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
           mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i])), collapse = ', '),")", " abs(x)^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
-          sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
-        }  else {
+          if(domain == "counts"){
+            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+          } else {
+            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+          }
+        } else {
           dif1 <- setdiff(names(param), names(formals(dist)))
           dif2 <- setdiff(names(formals(dist)), names(param))
           dif2 <- dif2[!dif2 == "x" & !dif2 == "log"]
@@ -223,9 +265,13 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             rel.tol = rel.tol * 10
             q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ")")))
           }
-          if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+          if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
           mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ")", " abs(x)^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))))
-          sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
+          if(domain == "counts"){
+            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
+          } else {
+            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ")"))))
+          }
         } else {
           dif3 <- setdiff(names(formals(dist)), names(param))
           dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
@@ -245,9 +291,13 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
               rel.tol = rel.tol * 10
               q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
             }
-            if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+            if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
             mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i])), collapse = ', '),")", " x^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
-            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            if(domain == "counts"){
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            } else {
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            }
           }  else {
             dif1 <- setdiff(names(param), names(formals(dist)))
             dif2 <- setdiff(names(formals(dist)), names(param))
@@ -261,9 +311,13 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
               rel.tol = rel.tol * 10
               q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ")")))
             }
-            if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+            if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
             mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ")", " x^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))))
-            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
+            if(domain == "counts"){
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
+            } else {
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ")"))))
+            }
           } else {
             dif3 <- setdiff(names(formals(dist)), names(param))
             dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
@@ -278,11 +332,17 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
               rel.tol = rel.tol * 10
               q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
             }
-            if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+            if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
             med <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i])), collapse = ', '),")", " x * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
-            med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
             mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i])), collapse = ', '),")", " abs(x - med)^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
-            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            if(domain == "counts"){
+              med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            } else {
+              med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+            }
+            
           }  else {
             dif1 <- setdiff(names(param), names(formals(dist)))
             dif2 <- setdiff(names(formals(dist)), names(param))
@@ -296,11 +356,16 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
               rel.tol = rel.tol * 10
               q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1 - rel.tol, ")")))
             }
-            if(q == Inf) stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
+            if(q == Inf) stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else q <- q
             med <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ")", " x * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))))
-            med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
             mom <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ")", " abs(x - med)^k * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))))
-            sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
+            if(domain == "counts"){
+              med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")"))))
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q + 500, ")")))) 
+            } else {
+              med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ")"))))
+              sum(eval(parse(text = paste0("mom", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ")"))))
+            }
           } else {
             dif3 <- setdiff(names(formals(dist)), names(param))
             dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
@@ -334,7 +399,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
           mom <- tryCatch(expr = integrate(function(x) x^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                           error = function(e) "error")
         }
-        if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+        if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
       }  else {
         dif1 <- setdiff(names(param), names(formals(dist)))
         dif2 <- setdiff(names(formals(dist)), names(param))
@@ -350,7 +415,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
           mom <- tryCatch(expr = integrate(function(x) x^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                           error = function(e) "error")
         }
-        if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+        if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
       } else {
         dif3 <- setdiff(names(formals(dist)), names(param))
         dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
@@ -372,7 +437,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             mom <- tryCatch(expr = integrate(function(x) x^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+          if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
         }  else {
           dif1 <- setdiff(names(param), names(formals(dist)))
           dif2 <- setdiff(names(formals(dist)), names(param))
@@ -388,7 +453,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             mom <- tryCatch(expr = integrate(function(x) x^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+          if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
         } else {
           dif3 <- setdiff(names(formals(dist)), names(param))
           dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
@@ -405,7 +470,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             med <- tryCatch(expr = integrate(function(x) x * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(med[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else med <- med
+          if(med[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else med <- med
           mom <- tryCatch(expr = integrate(function(x) (x - med$value)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                           error = function(e) "error")
           while(mom[1] == "error" & rel.tol <= 1e-6){
@@ -413,7 +478,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             mom <- tryCatch(expr = integrate(function(x) (x - med$value)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+          if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
         }  else {
           dif1 <- setdiff(names(param), names(formals(dist)))
           dif2 <- setdiff(names(formals(dist)), names(param))
@@ -429,7 +494,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             med <- tryCatch(expr = integrate(function(x) x * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(med[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else med <- med
+          if(med[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else med <- med
           mom <- tryCatch(expr = integrate(function(x) (x - med$value)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                           error = function(e) "error")
           while(mom[1] == "error" & rel.tol <= 1e-6){
@@ -437,7 +502,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             mom <- tryCatch(expr = integrate(function(x) (x - med$value)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+          if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
         } else {
           dif3 <- setdiff(names(formals(dist)), names(param))
           dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
@@ -459,7 +524,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
           mom <- tryCatch(expr = integrate(function(x) abs(x)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                           error = function(e) "error")
         }
-        if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+        if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
       }  else {
         dif1 <- setdiff(names(param), names(formals(dist)))
         dif2 <- setdiff(names(formals(dist)), names(param))
@@ -475,7 +540,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
           mom <- tryCatch(expr = integrate(function(x) abs(x)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                           error = function(e) "error")
         }
-        if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+        if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
       } else {
         dif3 <- setdiff(names(formals(dist)), names(param))
         dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
@@ -497,7 +562,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             mom <- tryCatch(expr = integrate(function(x) abs(x)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+          if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
         }  else {
           dif1 <- setdiff(names(param), names(formals(dist)))
           dif2 <- setdiff(names(formals(dist)), names(param))
@@ -513,7 +578,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             mom <- tryCatch(expr = integrate(function(x) abs(x)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+          if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
         } else {
           dif3 <- setdiff(names(formals(dist)), names(param))
           dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
@@ -530,7 +595,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             med <- tryCatch(expr = integrate(function(x) x * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(med[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else med <- med
+          if(med[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else med <- med
           mom <- tryCatch(expr = integrate(function(x) abs(x - med$value)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                           error = function(e) "error")
           while(mom[1] == "error" & rel.tol <= 1e-6){
@@ -538,7 +603,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             mom <- tryCatch(expr = integrate(function(x) abs(x - med$value)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+          if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
         }  else {
           dif1 <- setdiff(names(param), names(formals(dist)))
           dif2 <- setdiff(names(formals(dist)), names(param))
@@ -554,7 +619,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             med <- tryCatch(expr = integrate(function(x) x * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(med[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else med <- med
+          if(med[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else med <- med
           mom <- tryCatch(expr = integrate(function(x) abs(x - med$value)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                           error = function(e) "error")
           while(mom[1] == "error" & rel.tol <= 1e-6){
@@ -562,7 +627,7 @@ moments <- function(k, dist, param, domain = "realline", central = FALSE, absolu
             mom <- tryCatch(expr = integrate(function(x) abs(x - med$value)^k * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
-          if(mom[1] == "error") stop("the asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
+          if(mom[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else mom
         } else {
           dif3 <- setdiff(names(formals(dist)), names(param))
           dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
