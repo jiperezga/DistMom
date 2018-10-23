@@ -9,21 +9,21 @@ moments(k, dist, param, domain, central = FALSE, absolute = FALSE)
 \arguments{
 \item{k}{order of the moment of interest}
 
-\item{dist}{density name for the distribution. The created density functions must have a name of the form \code{dxxx}. To understand its use see details and examples.}
+\item{dist}{density or mass name for the distribution. The created density or mass functions must have a name of the form \code{dxxx}. To understand its use see details and examples.}
 
 \item{param}{are the parameters of the distribution. The name of each parameter must be specified. To understand its use see examples.}
 
 \item{domain}{defines the domain of the distribution function. The type of domain of distribution to be tried see details.}
 
-\item{central}{logical; if TRUE, the k-th central moments are given as \eqn{E[(X-\mu)^k]}.}
+\item{central}{logical; if TRUE, the k-th central moments are given as \eqn{E[(X-\mu)^k]}. FALSE is the default value.}
 
-\item{absolute}{logical; if TRUE, the k-th absolute moments are given as \eqn{E|X|^k]}.}
+\item{absolute}{logical; if TRUE, the k-th absolute moments are given as \eqn{E|X|^k]}. FALSE is the default value.}
 }
 \value{
-\code{moments} gives the theorical k-th raw, central, absolute or absolute central moments of any continuous probability distribution function.
+\code{moments} gives the theorical k-th raw, central, absolute or central-absolute moments of any continuous or discrete probability distribution function.
 }
 \description{
-Calcule theoretical raw, central, absolute or absolute central moments of any continuous probability distribution function.
+Calcule theoretical raw, central, absolute or absolute central moments of continuous or discrete probability distribution function.
 }
 \details{
 The \code{moments} function supports probability distribution functions of a large number of libraries.
@@ -45,7 +45,11 @@ The following are the different \code{domain} argument: \itemize{
 If \code{central = TRUE} and \code{absolute = TRUE} are selected, the k-th central absolute moments is calculated and given as \eqn{E|(X-\mu)^k|}.
 }
 \note{
-many distributions support \code{domain = "realline"} even though they are not defined from -\eqn{\infty} to \eqn{\infty} because of their programming. It is recommended to try initially with this argument.
+Many continuous distributions support \code{domain = "realline"} even though they are not defined from -\eqn{\infty} to \eqn{\infty} because of their programming.
+
+In the same way, many discrete distributions support \code{domain = "counts"} even though they are not defined from \eqn{0} to \eqn{\infty} or \eqn{1} to \eqn{\infty} because of their programming.
+
+It is recommended to try initially with this argument.
 }
 \examples{
 # Let's try first with distributions of the library stats
@@ -55,7 +59,7 @@ moments(k = 1:4, dist = "chisq", param = c(df = 4), domain = "realplus")
 
 #---------------------------------------------------------------------------------------
 
-# the name of the created density functions must have a name
+# The name of the created density functions must have a name
 # of the form dxxx. Also, how does it not have parameters
 # then \\code{param = NULL}
 dmyfunction <- function(x) x^3/4 
@@ -79,15 +83,17 @@ moments(k = 1:2, dist = "dpareto", param = c(a = 3, b = 7),
 
 #---------------------------------------------------------------------------------------
 
-# Let's try distributions from other libraries to calculated central
+# Let's try distributions from other libraries to calculated rae, central
 # and absolute moments
 if(!require("gamlss.dist")) install.packages("gamlss.dist") # to install the package
 moments(k = 3, dist = "PE", param = c(mu = -25, sigma = 7, nu = 4),
-        central = TRUE) 
+        domain = "realline") 
 moments(k = 3, dist = "PE", param = c(mu = -25, sigma = 7, nu = 4),
-        absolute = TRUE)
+        central = TRUE, domain = "realline") 
 moments(k = 3, dist = "PE", param = c(mu = -25, sigma = 7, nu = 4),
-        central = TRUE, absolute = TRUE)
+        absolute = TRUE, domain = "realline")
+moments(k = 3, dist = "PE", param = c(mu = -25, sigma = 7, nu = 4),
+        central = TRUE, absolute = TRUE, domain = "realline")
 
 #---------------------------------------------------------------------------------------
 
