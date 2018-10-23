@@ -69,7 +69,8 @@
 #' 
 #' #---------------------------------------------------------------------------------------
 #' 
-#' # Let's try with a discrete distributions to calculated central moments
+#' # Let's try with a discrete distributions to calculated raw and
+#' # central moments
 #' if(!require("gamlss.dist")) install.packages("gamlss.dist") # to install the package
 #' moments(k = 1:4, dist = "DEL", param = c(mu = 2, sigma = 3, nu = 0.5))
 #' moments(k = 1:4, dist = "DEL", param = c(mu = 2, sigma = 3, nu = 0.5),
