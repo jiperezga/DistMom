@@ -4,8 +4,7 @@
 \alias{moments}
 \title{Moment function}
 \usage{
-moments(k, dist, param, domain = "realline", central = FALSE,
-  absolute = FALSE, rel.tol = 1e-06)
+moments(k, dist, param, domain, central = FALSE, absolute = FALSE)
 }
 \arguments{
 \item{k}{order of the moment of interest}
@@ -19,8 +18,6 @@ moments(k, dist, param, domain = "realline", central = FALSE,
 \item{central}{logical; if TRUE, the k-th central moments are given as \eqn{E[(X-\mu)^k]}.}
 
 \item{absolute}{logical; if TRUE, the k-th absolute moments are given as \eqn{E|X|^k]}.}
-
-\item{rel.tol}{relative accuracy requested. By default it's value is \eqn{1e-6.}.}
 }
 \value{
 \code{moments} gives the theorical k-th raw, central, absolute or absolute central moments of any continuous probability distribution function.
@@ -36,18 +33,16 @@ In the \code{dist} argument, you must enter the name of the distribution of inte
 If \eqn{f(x)} has no parameters, then do \code{param = NULL}.
 
 The following are the different \code{domain} argument: \itemize{
-\item \code{realline}: the function is defined between -\eqn{\infty} and \eqn{\infty}. 
-\item \code{realplus}: the function is defined between 0 and \eqn{\infty}.
-\item \code{real0to1}: the function is defined between 0 and 1.
-\item \code{real-1to1}: the function is defined between -1 and 1.
-\item \code{c(lower = a, upper = b)}: the function is defined between \code{a} and \code{b}.
+\item \code{binom}: for discrete distributions of binomial type.
+\item \code{counts}: for discrete distributions of counting type.
+\item \code{realline}: for continuous distributions defined between -\eqn{\infty} and \eqn{\infty}. 
+\item \code{realplus}: for continuous distributions defined between 0 and \eqn{\infty}.
+\item \code{real0to1}: for continuous distributions defined between 0 and 1.
+\item \code{real-1to1}: for continuous distributions defined between -1 and 1.
+\item \code{c(lower = a, upper = b)}: for continuous distributions defined between \code{a} and \code{b}.
 }
 
 If \code{central = TRUE} and \code{absolute = TRUE} are selected, the k-th central absolute moments is calculated and given as \eqn{E|(X-\mu)^k|}.
-
-the value of \code{rel.tol} can be modified if there are convergence problems or if it is believed that the obtained precision is not enough.
-
-\code{rel.tol} cannot be less than max(50*.Machine$double.eps, 0.5e-28)
 }
 \note{
 many distributions support \code{domain = "realline"} even though they are not defined from -\eqn{\infty} to \eqn{\infty} because of their programming. It is recommended to try initially with this argument.
@@ -94,6 +89,24 @@ moments(k = 3, dist = "PE", param = c(mu = -25, sigma = 7, nu = 4),
 moments(k = 3, dist = "PE", param = c(mu = -25, sigma = 7, nu = 4),
         central = TRUE, absolute = TRUE)
 
+#---------------------------------------------------------------------------------------
+
+# Let's try with a discrete counting distribution to calculated
+# raw and central moments
+if(!require("gamlss.dist")) install.packages("gamlss.dist") # to install the package
+moments(k = 1:4, dist = "DEL", param = c(mu = 2, sigma = 3, nu = 0.5),
+        domain = "counts")
+moments(k = 1:4, dist = "DEL", param = c(mu = 2, sigma = 3, nu = 0.5),
+        domain = "counts", central = TRUE)
+        
+#---------------------------------------------------------------------------------------
+
+# Let's try with a discrete binomial type distribution to calculated
+# raw and central moments
+moments(k = 1:4, dist = "binom", param = c(size = 15, prob = 0.3),
+        domain = "binom")
+moments(k = 1:4, dist = "binom", param = c(size = 15, prob = 0.3),
+        domain = "binom", central = TRUE)
 }
 \seealso{
 \code{\link{Distributions}} for other standard distributions.
