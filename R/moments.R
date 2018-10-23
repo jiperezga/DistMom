@@ -1,12 +1,12 @@
 #' @title Moment function
 #' @author Jorge Iván Pérez, \email{jivan.perez@udea.edu.co}
-#' @description Calcule theoretical raw, central, absolute or absolute central moments of any continuous probability distribution function.
+#' @description Calcule theoretical raw, central, absolute or absolute central moments of continuous or discrete probability distribution function.
 #' @param k order of the moment of interest
-#' @param dist density name for the distribution. The created density functions must have a name of the form \code{dxxx}. To understand its use see details and examples.
+#' @param dist density or mass name for the distribution. The created density or mass functions must have a name of the form \code{dxxx}. To understand its use see details and examples.
 #' @param param are the parameters of the distribution. The name of each parameter must be specified. To understand its use see examples.
 #' @param domain defines the domain of the distribution function. The type of domain of distribution to be tried see details.
-#' @param central logical; if TRUE, the k-th central moments are given as \eqn{E[(X-\mu)^k]}.
-#' @param absolute logical; if TRUE, the k-th absolute moments are given as \eqn{E|X|^k]}.
+#' @param central logical; if TRUE, the k-th central moments are given as \eqn{E[(X-\mu)^k]}. FALSE is the default value.
+#' @param absolute logical; if TRUE, the k-th absolute moments are given as \eqn{E|X|^k]}. FALSE is the default value.
 #' @details The \code{moments} function supports probability distribution functions of a large number of libraries.
 #' @details In the \code{dist} argument, you must enter the name of the distribution of interest, for example, you can enter \code{"gamma"} or \code{"dgamma"}, both will produce the same result.
 #' @details If \eqn{f(x)} has no parameters, then do \code{param = NULL}.
@@ -20,8 +20,10 @@
 #' \item \code{c(lower = a, upper = b)}: for continuous distributions defined between \code{a} and \code{b}.
 #' }
 #' @details If \code{central = TRUE} and \code{absolute = TRUE} are selected, the k-th central absolute moments is calculated and given as \eqn{E|(X-\mu)^k|}.
-#' @return \code{moments} gives the theorical k-th raw, central, absolute or absolute central moments of any continuous probability distribution function.
-#' @note many distributions support \code{domain = "realline"} even though they are not defined from -\eqn{\infty} to \eqn{\infty} because of their programming. It is recommended to try initially with this argument.
+#' @return \code{moments} gives the theorical k-th raw, central, absolute or central-absolute moments of any continuous or discrete probability distribution function.
+#' @note Many continuous distributions support \code{domain = "realline"} even though they are not defined from -\eqn{\infty} to \eqn{\infty} because of their programming. 
+#' @note In the same way, many discrete distributions support \code{domain = "counts"} even though they are not defined from \eqn{0} to \eqn{\infty} or \eqn{1} to \eqn{\infty} because of their programming.
+#' @note It is recommended to try initially with this argument.
 #' @importFrom extraDistr dpareto
 #' @importFrom gamlss.dist dPE
 #' @seealso \code{\link{Distributions}} for other standard distributions.
@@ -34,7 +36,7 @@
 #' 
 #' #---------------------------------------------------------------------------------------
 #' 
-#' # the name of the created density functions must have a name
+#' # The name of the created density functions must have a name
 #' # of the form dxxx. Also, how does it not have parameters
 #' # then \code{param = NULL}
 #' dmyfunction <- function(x) x^3/4 
@@ -58,15 +60,17 @@
 #' 
 #' #---------------------------------------------------------------------------------------
 #' 
-#' # Let's try distributions from other libraries to calculated central
+#' # Let's try distributions from other libraries to calculated rae, central
 #' # and absolute moments
 #' if(!require("gamlss.dist")) install.packages("gamlss.dist") # to install the package
 #' moments(k = 3, dist = "PE", param = c(mu = -25, sigma = 7, nu = 4),
-#'         central = TRUE) 
+#'         domain = "realline") 
 #' moments(k = 3, dist = "PE", param = c(mu = -25, sigma = 7, nu = 4),
-#'         absolute = TRUE)
+#'         central = TRUE, domain = "realline") 
 #' moments(k = 3, dist = "PE", param = c(mu = -25, sigma = 7, nu = 4),
-#'         central = TRUE, absolute = TRUE)
+#'         absolute = TRUE, domain = "realline")
+#' moments(k = 3, dist = "PE", param = c(mu = -25, sigma = 7, nu = 4),
+#'         central = TRUE, absolute = TRUE, domain = "realline")
 #' 
 #' #---------------------------------------------------------------------------------------
 #' 
@@ -94,13 +98,23 @@ moments <- function(k, dist, param, domain, central = FALSE, absolute = FALSE){
   dist <- ifelse(exists(paste0("d", dist)), paste0("d", dist),
                  ifelse(exists(dist), dist, stop("The probability distribution entered does not exist or the library to which it belongs is not loaded")))
   
-  if(domain != "binom" & domain != "counts" & domain != "real0to1" & domain != "real-1to1" &
-     domain != "realline" & domain != "realplus" & !is.null(domain)) {
-    stop('The parameter entered for "domain" is not valid. Select between "binom", "counts", "real0to1", "real-1to1", "realline", "realplus" or NULL. See help for more information.')
+  if(is.character(domain)){
+    if(length(domain) == 1){
+      if(domain != "binom" & domain != "counts" & domain != "real0to1" &
+         domain != "real-1to1" & domain != "realline" & domain != "realplus"){
+        stop('The parameter entered for "domain" is not valid. Select between "binom", "counts", "real0to1", "real-1to1", "realline", "realplus" or c(lower = a, upper = b). \nSee help for more information.')
+      }
+    } else {
+      stop('The length of the "domain" is not valid. Select one between "binom", "counts", "real0to1", "real-1to1", "realline", "realplus" or c(lower = a, upper = b). \nSee help for more information.')
+    }
+  } else {
+    if(length(domain) != 2){
+        stop('The parameter entered for "domain" is not valid. Select between "binom", "counts", "real0to1", "real-1to1", "realline", "realplus" or c(lower = a, upper = b). \nSee help for more information.')
+    }
   }
   
   ############################ Discrete ################################
-  if(domain == "binom" | domain == "counts"){
+  if(domain[1] == "binom" | domain[1] == "counts"){
     qdist <- paste0("q", substring(dist, 2))
     if(!central & !absolute){
       mom <- if(!is.null(names(param))){
@@ -378,6 +392,7 @@ moments <- function(k, dist, param, domain, central = FALSE, absolute = FALSE){
     }
     return(res)
   }
+  
   ############################ Continuous ################################
   
   if(is.character(domain)){
@@ -491,7 +506,7 @@ moments <- function(k, dist, param, domain, central = FALSE, absolute = FALSE){
                           error = function(e) "error")
           while(med[1] == "error" & rel.tol <= 1e-6){
             rel.tol <-  rel.tol * 10
-            med <- tryCatch(expr = integrate(function(x) x * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+            med <- tryCatch(expr = integrate(function(x) x * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
                             error = function(e) "error")
           }
           if(med[1] == "error") stop("The asymptotic method does not converge, the value of the moment is very large or the moment of the distribution does not exist.") else med <- med
