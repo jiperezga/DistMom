@@ -21,6 +21,7 @@
 #' @note Many continuous distributions support \code{domain = "realline"} even though they are not defined from -\eqn{\infty} to \eqn{\infty} because of their programming. 
 #' @note In the same way, many discrete distributions support \code{domain = "counts"} even though they are not defined from \eqn{0} to \eqn{\infty} or \eqn{1} to \eqn{\infty} because of their programming.
 #' @note It is recommended to try initially with this argument.
+#' @note Discrete distributions require the existence of the quantile function, of the form qxxx.
 #' @seealso \code{\link{Distributions}} for other standard distributions.
 #' @seealso \code{\link{moments}}, \code{\link{skew}}, \code{\link{kurt}}.
 #' @examples
@@ -80,7 +81,7 @@
 #' # Let's try with a discrete binomial type distribution
 #' cumulants(k = 1:4, dist = "binom", param = c(size = 15, prob = 0.3),
 #'         domain = "binom")
-#' cumulants(k = 1:4, dist = "nbinom", param = c(size = 15, prob = 0.8),
+#' cumulants(k = 1:4, dist = "dhyper", param = c(m = 10, n = 7, k = 8),
 #'         domain = "binom")
 #' @export
 cumulants <- function(k, dist, param, domain){
