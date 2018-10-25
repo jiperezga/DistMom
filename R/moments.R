@@ -121,7 +121,7 @@ moments <- function(k, dist, param, domain, central = FALSE, absolute = FALSE){
       q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
       if(q == Inf) stop('Verify if the distribution is really of the binomial type. If you are not sure, try domain = "counts".')
     } else {
-      q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 0.999, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
+      q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 0.99, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
       q <- ifelse(q < 200, 5000, ifelse(q < 500, 10000, ifelse(q < 1000, 20000, 50000)))
     }
     if(!central & !absolute){
