@@ -44,6 +44,8 @@ Many continuous distributions support \code{domain = "realline"} even though the
 In the same way, many discrete distributions support \code{domain = "counts"} even though they are not defined from \eqn{0} to \eqn{\infty} or \eqn{1} to \eqn{\infty} because of their programming.
 
 It is recommended to try initially with this argument.
+
+Discrete distributions require the existence of the quantile function, of the form qxxx.
 }
 \examples{
 # Let's try first with distributions of the library stats
@@ -109,7 +111,7 @@ kurt(dist = "NBF", param = c(mu = 4, sigma = 3, nu = 2),
 # Let's try with a discrete binomial type distribution
 kurt(dist = "binom", param = c(size = 15, prob = 0.3),
         domain = "binom")
-kurt(dist = "nbinom", param = c(size = 15, prob = 0.8),
+kurt(dist = "dhyper", param = c(m = 10, n = 7, k = 8),
         domain = "binom")
 }
 \seealso{
