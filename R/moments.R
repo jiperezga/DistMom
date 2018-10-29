@@ -39,7 +39,7 @@
 #' 
 #' # The name of the created density functions must have a name
 #' # of the form dxxx. Also, how does it not have parameters
-#' # then \code{param = NULL}
+#' # then param = NULL
 #' dmyfunction <- function(x) x^3/4 
 #' # so that it integrates to 1, x must be between 0 to 2.
 #' moments(k = 1:4, dist = "dmyfunction", param = NULL, domain = c(0, 2))
@@ -55,8 +55,8 @@
 #' moments(k = 1:2, dist = "dpareto", param = c(a = 3, b = 7),
 #'         domain = c(7, Inf))
 #' # In this case, no moments are calculated for k> 2, because the
-#' # parameter of the pareto distribution is \code {a = 3}, and
-#' # therefore, the moments are defined for \eqn{E (X ^ k) < a}.
+#' # parameter of the pareto distribution is a = 3, and
+#' # therefore, the moments are defined for E (X ^ k) < a.
 #' # Read about pareto distribution for more information.
 #' 
 #' #---------------------------------------------------------------------------------------
@@ -115,7 +115,7 @@ moments <- function(k, dist, param, domain, central = FALSE, absolute = FALSE){
   }
   
   ############################ Discrete ################################
-  if(domain == "binom" | domain == "counts"){
+  if(domain[1] == "binom" | domain[1] == "counts"){
     qdist <- paste0("q", substring(dist, 2))
     if(domain == "binom"){
       q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
