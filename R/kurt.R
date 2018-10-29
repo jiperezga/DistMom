@@ -35,7 +35,7 @@
 #' 
 #' # The name of the created density functions must have a name
 #' # of the form dxxx. Also, how does it not have parameters
-#' # then \code{param = NULL}
+#' # then param = NULL
 #' dmyfunction <- function(x) x^3/4 
 #' # so that it integrates to 1, x must be between 0 to 2.
 #' kurt(dist = "dmyfunction", param = NULL, domain = c(0, 2))
@@ -55,8 +55,8 @@
 #'  
 #'         
 #' # In this case, no moments are calculated for k > 4, because the
-#' # parameter of the pareto distribution is \code {a = 5}, and
-#' # therefore, the moments are defined for \eqn{E (X ^ k) < a}.
+#' # parameter of the pareto distribution is a = 5, and
+#' # therefore, the moments are defined for E(X^k) < a.
 #' # Read about pareto distribution for more information.       
 #' 
 #' kurt(dist = "dbhatt", param = c(mu = 3, sigma = 7),
@@ -94,19 +94,155 @@
 #' @export
 
 kurt <- function(excess = FALSE, dist, param, domain){
-  CM4 <- tryCatch(expr = moments(k = 4, dist = dist, param = param, domain = domain,
-                                 central = TRUE), error = function(e) "error")
-  if(CM4 == "error") stop("The asymptotic method does not converge, the value of the fourth moment is very large or the Fourth moment of the distribution does not exist. \n Read about the conditions for the existence of the moments of the distribution of interest")
+  rel.tol <- 1e-20
+  dist <- ifelse(exists(paste0("d", dist)), paste0("d", dist),
+                 ifelse(exists(dist), dist, stop("The probability distribution entered does not exist or the library to which it belongs is not loaded")))
+  if(is.character(domain)){
+    if(length(domain) == 1){
+      if(domain != "binom" & domain != "counts" & domain != "real0to1" &
+         domain != "real-1to1" & domain != "realline" & domain != "realplus"){
+        stop('The parameter entered for "domain" is not valid. Select between "binom", "counts", "real0to1", "real-1to1", "realline", "realplus" or c(lower = a, upper = b). \nSee help for more information.')
+      }
+    } else {
+      stop('The length of the "domain" is not valid. Select one between "binom", "counts", "real0to1", "real-1to1", "realline", "realplus" or c(lower = a, upper = b). \nSee help for more information.')
+    }
+  } else {
+    if(length(domain) != 2){
+      stop('The parameter entered for "domain" is not valid. Select between "binom", "counts", "real0to1", "real-1to1", "realline", "realplus" or c(lower = a, upper = b). \nSee help for more information.')
+    }
+  }
   
-  CM2 <- moments(k = 2, dist = dist, param = param, domain = domain, central = TRUE)
-  if(excess) {
-    kurt <- CM4/CM2^(2) - 3
-    names(kurt) <- "Ex.Kurtosis"
+  ############################ Discrete ################################
+  if(domain[1] == "binom" | domain[1] == "counts"){
+    qdist <- paste0("q", substring(dist, 2))
+    if(domain == "binom"){
+      q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 1, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
+      if(q == Inf) stop('Verify if the distribution is really of the binomial type. If you are not sure, try domain = "counts".')
+    } else {
+      q <- eval(parse(text = paste0(qdist ,"(", names(formals(paste0(qdist)))[1], " = ", 0.99, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")")))
+      q <- ifelse(q < 200, 5000, ifelse(q < 500, 10000, ifelse(q < 1000, 20000, 50000)))
+    }
+    
+    if(!is.null(names(param))){
+      if(all(names(param) %in% names(formals(dist)))){
+        med <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i])), collapse = ', '),")", " x * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+        CM2 <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i])), collapse = ', '),")", " (x - med)^2 * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+        CM4 <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i])), collapse = ', '),")", " (x - med)^4 * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+        med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+        CM2 <- sum(eval(parse(text = paste0("CM2", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+        CM4 <- sum(eval(parse(text = paste0("CM4", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))))
+      }  else {
+        dif1 <- setdiff(names(param), names(formals(dist)))
+        dif2 <- setdiff(names(formals(dist)), names(param))
+        dif2 <- dif2[!dif2 == "x" & !dif2 == "log"]
+        stop(paste0("The name of the parameters entered ", '"',  paste(as.character(dif1), collapse = '" or "'), '"', " does not match the name of the parameters ", '"', paste(as.character(dif2), collapse = '" or "'), '"', " of the probability distribution. \n See ", '"', dist, '"', " help for more info."))
+      }
+    } else {
+      if(is.null(param)){
+        med <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ")", " x * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))))
+        CM2 <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ")", " (x - med)^2 * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))))
+        CM4 <- eval(parse(text = paste0("function(", names(formals(paste0(dist)))[1], ")", " (x - med)^4 * ", paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))))
+        med <- sum(eval(parse(text = paste0("med", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ")"))))
+        CM2 <- sum(eval(parse(text = paste0("CM2", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ")"))))
+        CM4 <- sum(eval(parse(text = paste0("CM4", "(", names(formals(paste0(dist)))[1], " = ", 1, ":", q, ")"))))
+      } else {
+        dif3 <- setdiff(names(formals(dist)), names(param))
+        dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
+        stop(paste0("The parameters of the distribution ", '"', dist, '"', " are ", '"', paste(as.character(dif3), collapse = '" or "'), '"', ". \n Please name what value belongs to which parameter. \n See the help of the ", '"', dist, '"', " function in ", getAnywhere(dist)$where[1], " for more information."))
+      }
+    }
+    if(excess) {
+      kurt <- CM4/CM2^(2) - 3
+      names(kurt) <- "Ex.Kurtosis"
     } else {
       kurt <- CM4/CM2^(2)
       names(kurt) <- "Kurtosis"
     }
+    return(kurt)
+  }
   
+  ############################ Continuous ################################
+  
+  if(is.character(domain)){
+    if(domain == "realline") {lowerDomain = -Inf; upperDomain = Inf}
+    if(domain == "realplus") {lowerDomain = 0; upperDomain = Inf}
+    if(domain == "real0to1") {lowerDomain = 0; upperDomain = 1}
+    if(domain == "real-1to1") {lowerDomain = -1; upperDomain = 1}
+  } else {
+    if(length(domain) == 2) {lowerDomain = min(domain); upperDomain = max(domain)}
+  }
+  
+  if(!is.null(names(param))){
+    if(all(names(param) %in% names(formals(dist)))){
+      med <- tryCatch(expr = integrate(function(x) x * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                      error = function(e) "error")
+      while(med[1] == "error" & rel.tol <= 1e-6){
+        rel.tol <-  rel.tol * 10
+        med <- tryCatch(expr = integrate(function(x) x * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                        error = function(e) "error")
+      }
+      if(med[1] == "error") stop("The asymptotic method does not converge, the value of the first moment is very large or the moment of the distribution does not exist.")
+      CM2 <- tryCatch(expr = integrate(function(x) (x - med$value)^2 * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                      error = function(e) "error")
+      while(CM2[1] == "error" & rel.tol <= 1e-6){
+        rel.tol <-  rel.tol * 10
+        CM2 <- tryCatch(expr = integrate(function(x) (x - med$value)^2 * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                        error = function(e) "error")
+      }
+      if(CM2[1] == "error") stop("The asymptotic method does not converge, the value of the second moment is very large or the moment of the distribution does not exist.")
+      CM4 <- tryCatch(expr = integrate(function(x) (x - med$value)^4 * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                      error = function(e) "error")
+      while(CM4[1] == "error" & rel.tol <= 1e-6){
+        rel.tol <-  rel.tol * 10
+        CM4 <- tryCatch(expr = integrate(function(x) (x - med$value)^4 * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ", ", paste0(sapply(X = 1:length(param), FUN = function(i) paste(names(param)[i], " = ", param[i])), collapse = ', '), ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                        error = function(e) "error")
+      }
+      if(CM4[1] == "error") stop("The asymptotic method does not converge, the value of the fourth moment is very large or the moment of the distribution does not exist.")
+    }  else {
+      dif1 <- setdiff(names(param), names(formals(dist)))
+      dif2 <- setdiff(names(formals(dist)), names(param))
+      dif2 <- dif2[!dif2 == "x" & !dif2 == "log"]
+      stop(paste0("The name of the parameters entered ", '"',  paste(as.character(dif1), collapse = '" or "'), '"', " does not match the name of the parameters ", '"', paste(as.character(dif2), collapse = '" or "'), '"', " of the probability distribution. \n See ", '"', dist, '"', " help for more info."))
+    }
+  } else {
+    if(is.null(param)){
+      med <- tryCatch(expr = integrate(function(x) x * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                      error = function(e) "error")
+      while(med[1] == "error" & rel.tol <= 1e-6){
+        rel.tol <-  rel.tol * 10
+        med <- tryCatch(expr = integrate(function(x) x * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                        error = function(e) "error")
+      }
+      if(med[1] == "error") stop("The asymptotic method does not converge, the value of the first moment is very large or the moment of the distribution does not exist.")
+      CM2 <- tryCatch(expr = integrate(function(x) (x - med$value)^2 * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                      error = function(e) "error")
+      while(CM2[1] == "error" & rel.tol <= 1e-6){
+        rel.tol <-  rel.tol * 10
+        CM2 <- tryCatch(expr = integrate(function(x) (x - med$value)^2 * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                        error = function(e) "error")
+      }
+      if(CM2[1] == "error") stop("The asymptotic method does not converge, the value of the second moment is very large or the moment of the distribution does not exist.")
+      CM4 <- tryCatch(expr = integrate(function(x) (x - med$value)^4 * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                      error = function(e) "error")
+      while(CM4[1] == "error" & rel.tol <= 1e-6){
+        rel.tol <-  rel.tol * 10
+        CM4 <- tryCatch(expr = integrate(function(x) (x - med$value)^4 * eval(parse(text = paste0(dist ,"(", names(formals(paste0(dist)))[1], " = ", "x", ")"))), lower = lowerDomain, upper = upperDomain, rel.tol = rel.tol),
+                        error = function(e) "error")
+      }
+      if(CM4[1] == "error") stop("The asymptotic method does not converge, the value of the fourth moment is very large or the moment of the distribution does not exist.")
+    } else {
+      dif3 <- setdiff(names(formals(dist)), names(param))
+      dif3 <- dif3[!dif3 == "x" & !dif3 == "log"]
+      stop(paste0("The parameters of the distribution ", '"', dist, '"', " are ", '"', paste(as.character(dif3), collapse = '" or "'), '"', ". \n Please name what value belongs to which parameter. \n See the help of the ", '"', dist, '"', " function in ", getAnywhere(dist)$where[1], " for more information."))
+    }
+  }
+  if(excess) {
+    kurt <- CM4$value/CM2$value^(2) - 3
+    names(kurt) <- "Ex.Kurtosis"
+  } else {
+    kurt <- CM4$value/CM2$value^(2)
+    names(kurt) <- "Kurtosis"
+  }
   return(kurt)
 }
 
