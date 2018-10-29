@@ -55,7 +55,7 @@ skew(dist = "chisq", param = c(df = 4), domain = "realplus")
 
 # The name of the created density functions must have a name
 # of the form dxxx. Also, how does it not have parameters
-# then \\code{param = NULL}
+# then param = NULL
 dmyfunction <- function(x) x^3/4 
 # so that it integrates to 1, x must be between 0 to 2.
 skew(dist = "dmyfunction", param = NULL, domain = c(0, 2))
@@ -70,8 +70,8 @@ skew(dist = "dpareto", param = c(a = 4, b = 10),
      domain = "realline")
         
 # In this case, no moments are calculated for k> 3, because the
-# parameter of the pareto distribution is \\code {a = 4}, and
-# therefore, the moments are defined for \\eqn{E (X ^ k) < a}.
+# parameter of the pareto distribution is a = 4, and
+# therefore, the moments are defined for E(X^k) < a.
 # Read about pareto distribution for more information.       
 
 skew(dist = "dbhatt", param = c(mu = 3, sigma = 7),

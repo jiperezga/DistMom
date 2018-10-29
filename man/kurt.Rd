@@ -57,7 +57,7 @@ kurt(dist = "chisq", param = c(df = 4), domain = "realplus")
 
 # The name of the created density functions must have a name
 # of the form dxxx. Also, how does it not have parameters
-# then \\code{param = NULL}
+# then param = NULL
 dmyfunction <- function(x) x^3/4 
 # so that it integrates to 1, x must be between 0 to 2.
 kurt(dist = "dmyfunction", param = NULL, domain = c(0, 2))
@@ -77,8 +77,8 @@ kurt(dist = "dpareto", param = c(a = 5, b = 10),
  
         
 # In this case, no moments are calculated for k > 4, because the
-# parameter of the pareto distribution is \\code {a = 5}, and
-# therefore, the moments are defined for \\eqn{E (X ^ k) < a}.
+# parameter of the pareto distribution is a = 5, and
+# therefore, the moments are defined for E(X^k) < a.
 # Read about pareto distribution for more information.       
 
 kurt(dist = "dbhatt", param = c(mu = 3, sigma = 7),
