@@ -1,7 +1,7 @@
 Package: DistMom
 Type: Package
 Title: Distribution moments or distribution cumulants.
-Version: 0.2.1
+Version: 0.2.2
 Authors@R: person("Perez,", "Jorge",, "jivan.perez@udea.edu.co", c("aut", "cre"))
 Maintainer: Jorge Ivan Perez Garcia <jivan.perez@udea.edu.co>
 Date: 2018-10-23
